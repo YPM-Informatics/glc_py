@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>GEOLocate Embedded Sample</title>
+	<style>
+        html {
+            height: 100%;
+        }
+
+        body {
+            background: White;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            left: 0;
+        }
+        iframe {
+            width: 90%;
+            height: 90%;
+            margin: 0px;
+            border: 1px solid #006060;
+        }
+	</style>
+
+	<script type="text/javascript">
+        lid = -1;
+        rid = -1;
+        function sendSaveRequest(l, r, lat, lon, u, p) {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+
+                }
+            };
+            xhttp.open("POST", "http://localhost:8080/save", true);
+            xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            data = "lid=" + l + "&rid=" + r + "&lat=" + lat + "&lon=" + lon + "&u=" + u + "&p=" + p
+            xhttp.send(data);
+        }
+
+        function getNextRecord() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    result = this.responseText;
+                    var _lid = -1;
+                    var _rid = -1;
+                    var params = result.split("&");
+                    for (var i = 0; i < params.length; i++) {
+                        p = params[i].split("=")
+                        if (p.length == 2) {
+                            if (p[0] == "lid") {
+                                _lid = p[1];
+                            }
+                            else if (p[0] == "rid") {
+                                _rid = p[1];
+                            }
+                        }
+                    }
+                    if (_rid > -1 && _lid > -1) {
+                        lid = _lid;
+                        rid = _rid;
+                        document.getElementById('Iframe1').src = 'http://www.geo-locate.org/web/webgeoreflight.aspx?' + result;
+                        document.getElementById("received-message").innerHTML = "LocalityID=" + lid + ";ResultID=" + rid + ";  ->Retrieved.";
+                    }
+                    else {
+                        document.getElementById('Iframe1').src = '';
+                        alert('No record returned. You are likely finished.')
+                    }
+                }
+            };
+            xhttp.open("GET", "http://localhost:8080/getrec", true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send();
+        }
+        
+
+	    function displayMessage(evt) {
+            var message;
+	        if (evt.origin !== "http://www.geo-locate.org") {
+	            message = "iframe url does not have permision to interact with me";
+	        }
+	        else {
+	            message = "Saving Result...";
+	            var breakdown = evt.data.split("|");
+                if (breakdown.length == 4)
+                {
+                    sendSaveRequest(lid, rid, breakdown[0], breakdown[1], breakdown[2], breakdown[3]);
+                    message = "LocalityID=" + lid + ";ResultID=" + rid + ";  ->Saved."
+                }
+	        }
+	        document.getElementById("received-message").innerHTML = message;
+	    }
+	    if (window.addEventListener) {
+	        // For standards-compliant web browsers
+	        window.addEventListener("message", displayMessage, false);
+	    }
+	    else {
+	        window.attachEvent("onmessage", displayMessage);
+	    }
+	</script>
+</head>
+
+<body>
+	
+    <div style="height:100%;" id="container">
+        <button onclick="getNextRecord()">Get Record</button>
+        <div style="height:100%">
+            <iframe id="Iframe1" src=""></iframe>
+            <p id="received-message"></p>
+        </div>
+    </div>
+</body>
+</html>
