@@ -104,8 +104,8 @@ class Geolocate:
             r.source = source
             return(r)
         except ValueError as e:
-            if db != None:
-                db.close()
+            if self.cacheDB != None:
+                self.cacheDB.close()
             self.log(e.strerror)
             raise e
 
