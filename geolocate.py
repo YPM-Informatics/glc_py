@@ -5,7 +5,7 @@
 # postprocess with csv-to-sqlite -f out.csv -o out.db --no-types 
 # ###
 
-import sys, getopt, urllib, json, csv, time
+import os, sys, getopt, urllib, json, csv, time
 from collections import namedtuple
 import urllib.request
 import sqlite3
@@ -203,49 +203,59 @@ if __name__ == "__main__":
             header2 = reader.fieldnames
             header2.extend(['geolocate_LocalityID', 'geolocate_ResultID','geolocate_Latitude', 'geolocate_Longitude', 'geolocate_UncertaintyRadiusMeters','geolocate_UncertaintyPolygon', 
                             'geolocate_Score', 'geolocate_Precision', 'geolocate_ParsePattern','geolocate_locFieldUsed','geolocate_NumResults'])
-            with open(outFile, 'wt', encoding='utf8', newline='') as csvfile1:
+            startAt = 0
+            if (os.path.isfile(outFile)):
+                 with open(outFile, 'rt', encoding='utf8') as tmp:
+                    tmp_reader = csv.DictReader(tmp)
+                    for row in tmp_reader:
+                        startAt = startAt +1;
+                    print('Existing file detected, starting recovery at record no.', startAt)
+                    time.sleep(5)
+            with open(outFile, 'a+', encoding='utf8', newline='') as csvfile1:
                 writer = csv.DictWriter(csvfile1, fieldnames=header)
-                writer.writeheader()
+                if startAt == 0:
+                    writer.writeheader()
                 n = 0
-                y = 0
-                glc_resultID = 0
                 for row in reader:
                     n = n+1
-                    print(n)
-                    row['geolocate_LocalityID'] = n
-                    for locHeader in localityHeaders:
-                        print(row[locHeader])
-                        resultSet = glc.georef(row[locHeader],row[countryHeader],row[stateProvHeader], row[countyHeader], 
-                                       hwyX=glc_options['hwyX'], enableH2O=glc_options['enableH2O'], doUncert=glc_options['doUncert'],
-                                       doPoly=glc_options['doPoly'],displacePoly=glc_options['displacePoly'],languageKey=glc_options['languageKey'])
-                    
-                        if resultSet.source != "cache":
-                            time.sleep(t)
-                        print("No. Results: " + str(resultSet.numResults))
-                        row['geolocate_NumResults'] = resultSet.numResults
-                        if (resultSet.numResults > 0):
-                            row['geolocate_locFieldUsed'] = locHeader
-                            break;
-                    i = 0
-                    if (resultSet.numResults > 0):
-                        for res in resultSet.results:
-                            i += 1;
-                            row['geolocate_ResultID'] = i
-                            row['geolocate_Latitude'] = res.latitude                            
-                            row['geolocate_Longitude'] = res.longitude
-                            row['geolocate_UncertaintyRadiusMeters'] = res.uncertaintyRadiusMeters
-                            row['geolocate_UncertaintyPolygon'] = res.uncertaintyPolygon
-                            row['geolocate_Precision'] = res.precision
-                            row['geolocate_Score'] = res.score
-                            row['geolocate_ParsePattern'] = res.parsePattern
-                            if outFirstOnly == False:
-                                    writer.writerow(row)
-                            elif i == 1:
-                                    writer.writerow(row)
-                            print(row)
-                    else:
-                            writer.writerow(row)
-                    print('***************')
-                    if nmax == n:
+                    #print(n)
+                    if (nmax > 0 and n > nmax):
                         break;
+                    if (n > startAt):
+                        print(n)
+                        row['geolocate_LocalityID'] = n
+                        for locHeader in localityHeaders:
+                            print(row[locHeader])
+                            resultSet = glc.georef(row[locHeader],row[countryHeader],row[stateProvHeader], row[countyHeader], 
+                                           hwyX=glc_options['hwyX'], enableH2O=glc_options['enableH2O'], doUncert=glc_options['doUncert'],
+                                           doPoly=glc_options['doPoly'],displacePoly=glc_options['displacePoly'],languageKey=glc_options['languageKey'])
+                    
+                            if resultSet.source != "cache":
+                                time.sleep(t)
+                            print("No. Results: " + str(resultSet.numResults))
+                            row['geolocate_NumResults'] = resultSet.numResults
+                            if (resultSet.numResults > 0):
+                                row['geolocate_locFieldUsed'] = locHeader
+                                break;
+                        i = 0
+                        if (resultSet.numResults > 0):
+                            for res in resultSet.results:
+                                i += 1;
+                                row['geolocate_ResultID'] = i
+                                row['geolocate_Latitude'] = res.latitude                            
+                                row['geolocate_Longitude'] = res.longitude
+                                row['geolocate_UncertaintyRadiusMeters'] = res.uncertaintyRadiusMeters
+                                row['geolocate_UncertaintyPolygon'] = res.uncertaintyPolygon
+                                row['geolocate_Precision'] = res.precision
+                                row['geolocate_Score'] = res.score
+                                row['geolocate_ParsePattern'] = res.parsePattern
+                                if outFirstOnly == False:
+                                        writer.writerow(row)
+                                elif i == 1:
+                                        writer.writerow(row)
+                                print(row)
+                        else:
+                                writer.writerow(row)
+                        print('***************')
+                        
 
